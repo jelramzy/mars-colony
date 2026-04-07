@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HAROUN JELASSI 6eme- BioTech City 2150 — Mars 3D</title>
+<title>BioTech City 2150 — Mars 3D</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -43,9 +43,9 @@ body{background:#000;overflow:hidden;font-family:'Exo 2',sans-serif;}
 </style>
 </head>
 <body>
-<div id="loading"><h2>HAROUN JELASSI 6eme- BioTech City 2150 — Mars 3D</h2><p>CONSTRUCTION DE LA COLONIE...</p></div>
+<div id="loading"><h2>BIOTECH CITY 2150</h2><p>CONSTRUCTION DE LA COLONIE...</p></div>
 <div id="hud">
-  <div><div id="city-name">⬡ HAROUN JELASSI 6eme- BioTech City 2150 — Mars 3D</div><div id="city-sub">COLONIE MARTIENNE — SECTEUR ALPHA</div></div>
+  <div><div id="city-name">⬡ BIOTECH CITY 2150</div><div id="city-sub">COLONIE MARTIENNE — SECTEUR ALPHA</div></div>
   <div id="status-box">ZOOMER SUR UN DÔME<br>PUIS CLIQUER POUR ENTRER</div>
 </div>
 <div id="hint">▼ ZOOMER ET CLIQUER SUR UN DÔME ▼</div>
@@ -330,9 +330,17 @@ const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,2000);
 camera.position.set(0,120,220);
 camera.lookAt(0,0,0);
 
-const renderer=new THREE.WebGLRenderer({antialias:true});
+// ── MOBILE DETECTION ─────────────────────────────────────────────────────
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (window.innerWidth <= 768);
+
+// Mobile: disable antialias + limit pixel ratio to save GPU
+const renderer=new THREE.WebGLRenderer({
+  antialias: !isMobileDevice,
+  powerPreference: isMobileDevice ? "low-power" : "high-performance"
+});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(isMobileDevice ? 1 : Math.min(devicePixelRatio,2));
 // ── Patch computeBoundingSphere to never crash the render loop ────────────
 const _cbsOrig = THREE.BufferGeometry.prototype.computeBoundingSphere;
 THREE.BufferGeometry.prototype.computeBoundingSphere = function(){
@@ -346,14 +354,14 @@ THREE.BufferGeometry.prototype.computeBoundingSphere = function(){
     this.boundingSphere.set(new THREE.Vector3(0,0,0), 0.001);
   }
 };
-renderer.shadowMap.enabled=true;
+renderer.shadowMap.enabled = !isMobileDevice;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=0.9;
 document.body.appendChild(renderer.domElement);
 
 // Lights
-const sun=new THREE.DirectionalLight(0xffaa66,1.4);
+const sun=new THREE.DirectionalLight(0xffaa66, isMobileDevice ? 4.0 : 1.4);
 sun.position.set(100,80,60);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
@@ -361,14 +369,21 @@ sun.shadow.camera.near=10;sun.shadow.camera.far=500;
 sun.shadow.camera.left=sun.shadow.camera.bottom=-200;
 sun.shadow.camera.right=sun.shadow.camera.top=200;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x331100,0.6));
+// Extra fill lights for mobile (Lambert needs more light sources)
+if(isMobileDevice){
+  const fillL = new THREE.DirectionalLight(0xaaddff, 2.0);
+  fillL.position.set(-50,80,50); scene.add(fillL);
+  const fillR = new THREE.DirectionalLight(0xffddaa, 1.5);
+  fillR.position.set(50,40,-80); scene.add(fillR);
+}
+scene.add(new THREE.AmbientLight(isMobileDevice ? 0x886644 : 0x331100, isMobileDevice ? 2.5 : 0.6));
 scene.add(new THREE.HemisphereLight(0xff6633,0x110400,0.35));
 
 // Sky
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(900,32,32),new THREE.MeshBasicMaterial({color:0x0d0200,side:THREE.BackSide})));
 
 // Stars
-const sv=[];for(let i=0;i<4000;i++){const t=Math.random()*Math.PI*2,p=Math.acos(2*Math.random()-1),r=800;sv.push(r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));}
+const sv=[];for(let i=0;i<(isMobileDevice?500:4000);i++){const t=Math.random()*Math.PI*2,p=Math.acos(2*Math.random()-1),r=800;sv.push(r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));}
 const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
 scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.5,transparent:true,opacity:.7})));
 
@@ -377,7 +392,7 @@ const tg=new THREE.PlaneGeometry(600,600,120,120);tg.rotateX(-Math.PI/2);
 const tp=tg.attributes.position;
 for(let i=0;i<tp.count;i++){const x=tp.getX(i),z=tp.getZ(i),d=Math.sqrt(x*x+z*z),n=Math.sin(x*.22)*Math.cos(z*.18)*2.5+Math.sin(x*.55+z*.38)*.9+Math.cos(x*.1+z*.15)*3.5;tp.setY(i,n*Math.max(0,1-Math.exp(-d*d/5000))*.6);}
 tg.computeVertexNormals();
-const terrain=new THREE.Mesh(tg,new THREE.MeshStandardMaterial({color:0xcc4411,roughness:.95,metalness:.04}));
+const terrain=new THREE.Mesh(tg,isMobileDevice ? new THREE.MeshLambertMaterial({color:0xcc4411}) : new THREE.MeshStandardMaterial({color:0xcc4411,roughness:.95,metalness:.04}));
 terrain.receiveShadow=true;scene.add(terrain);
 
 // ── REALISTIC CRATER RIM ──────────────────────────────────────────────────
@@ -545,6 +560,7 @@ terrain.receiveShadow=true;scene.add(terrain);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MOUNTAIN CITY — Tunnel portals, cliff dwellings, elevators in crater rim
+if(!isMobileDevice){ // Skip on mobile — too heavy
 // ═══════════════════════════════════════════════════════════════════════════
 (function(){
   const CR=160; // must match crater rim radius
@@ -800,11 +816,18 @@ terrain.receiveShadow=true;scene.add(terrain);
 })();
 
 
+} // end !isMobileDevice (mountain city)
 // ═══════════════════════════════════════════════════════════════════════════
 // ELEMENT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════
-function mkMat(col,opts={}){return new THREE.MeshStandardMaterial({color:col,roughness:.4,metalness:.5,...opts});}
-function mkGlow(col,ei=.8){return new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:ei,roughness:.2,metalness:.1});}
+function mkMat(col,opts={}){
+  if(isMobileDevice){const {roughness,metalness,envMapIntensity,...mo}=opts;return new THREE.MeshLambertMaterial({color:col,...mo});}
+  return new THREE.MeshStandardMaterial({color:col,roughness:.4,metalness:.5,...opts});
+}
+function mkGlow(col,ei=.8){
+  if(isMobileDevice){return new THREE.MeshLambertMaterial({color:col,emissive:col,emissiveIntensity:Math.min(ei,1)});}
+  return new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:ei,roughness:.2,metalness:.1});
+}
 
 
 // Safe line geometry helper — never produces NaN geometry
@@ -2301,16 +2324,26 @@ DOMES.forEach((data,idx)=>{
   il.position.y=data.radius*.6+2;dg.add(il);
 
   // Dome glass — very transparent so you can see inside
-  const domeGeo=new THREE.SphereGeometry(data.radius,48,48,0,Math.PI*2,0,Math.PI/2);
-  const domeMat=new THREE.MeshStandardMaterial({
-    color:new THREE.Color(data.color).multiplyScalar(.25),
-    transparent:true,
-    opacity:.08,
-    roughness:.02,
-    metalness:.05,
-    side:THREE.FrontSide,
-    depthWrite:false
-  });
+  const domeGeo=new THREE.SphereGeometry(data.radius, isMobileDevice?16:48, isMobileDevice?12:48, 0,Math.PI*2,0,Math.PI/2);
+  // Mobile: use more opaque, simpler material — transparent .08 is invisible on mobile
+  const domeMat = isMobileDevice
+    ? new THREE.MeshBasicMaterial({
+        color: new THREE.Color(data.color).multiplyScalar(.5),
+        transparent: true,
+        opacity: .25,
+        side: THREE.FrontSide,
+        depthWrite: false,
+        wireframe: false
+      })
+    : new THREE.MeshStandardMaterial({
+        color:new THREE.Color(data.color).multiplyScalar(.25),
+        transparent:true,
+        opacity:.08,
+        roughness:.02,
+        metalness:.05,
+        side:THREE.FrontSide,
+        depthWrite:false
+      });
   const domeMesh=new THREE.Mesh(domeGeo,domeMat);
   domeMesh.position.y=2;
   domeMesh.userData={domeIdx:idx,isDomeGlass:true};
@@ -2318,10 +2351,12 @@ DOMES.forEach((data,idx)=>{
   dg.add(domeMesh);
 
   // Dome frame lines
-  for(let i=0;i<12;i++){
-    const a=(i/12)*Math.PI*2;const pts=[];
-    for(let j=0;j<=24;j++){const phi=(j/24)*Math.PI/2;pts.push(new THREE.Vector3(Math.cos(a)*data.radius*Math.cos(phi),data.radius*Math.sin(phi)+2,Math.sin(a)*data.radius*Math.cos(phi)));}
-    dg.add(new THREE.Line(safeLineGeo(pts),new THREE.LineBasicMaterial({color:data.color,transparent:true,opacity:.22})));
+  const frameCount = isMobileDevice ? 6 : 12;
+  for(let i=0;i<frameCount;i++){
+    const a=(i/frameCount)*Math.PI*2;const pts=[];
+    const frameSegs = isMobileDevice ? 8 : 24;
+    for(let j=0;j<=frameSegs;j++){const phi=(j/frameSegs)*Math.PI/2;pts.push(new THREE.Vector3(Math.cos(a)*data.radius*Math.cos(phi),data.radius*Math.sin(phi)+2,Math.sin(a)*data.radius*Math.cos(phi)));}
+    dg.add(new THREE.Line(safeLineGeo(pts),new THREE.LineBasicMaterial({color:data.color,transparent:true,opacity: isMobileDevice?.45:.22})));
   }
   // Latitude rings
   for(let j=1;j<4;j++){
@@ -2438,7 +2473,7 @@ function buildTunnel(sx,sz,ex,ez,color){
 ].forEach(t=>buildTunnel(t.sx,t.sz,t.ex,t.ez,0xff6600));
 
 // Dust particles
-const dv=[];for(let i=0;i<600;i++)dv.push((Math.random()-.5)*300,Math.random()*20,(Math.random()-.5)*300);
+const dv=[];for(let i=0;i<(isMobileDevice?150:600);i++)dv.push((Math.random()-.5)*300,Math.random()*20,(Math.random()-.5)*300);
 const dg2=new THREE.BufferGeometry();dg2.setAttribute('position',new THREE.Float32BufferAttribute(dv,3));
 const dust=new THREE.Points(dg2,new THREE.PointsMaterial({color:0xff7733,size:.18,transparent:true,opacity:.3}));
 scene.add(dust);
@@ -3805,8 +3840,8 @@ function exitDome(){
 // ═══════════════════════════════════════════════════════════════════════════
 (function(){
 
-  const mkM = (col,opts={}) => new THREE.MeshStandardMaterial({color:col,roughness:.4,metalness:.5,...opts});
-  const mkG = (col,ei=.8) => new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:ei,roughness:.2,metalness:.1});
+  const mkM = (col,opts={}) => isMobileDevice ? new THREE.MeshLambertMaterial({color:col}) : new THREE.MeshStandardMaterial({color:col,roughness:.4,metalness:.5,...opts});
+  const mkG = (col,ei=.8) => isMobileDevice ? new THREE.MeshLambertMaterial({color:col,emissive:col,emissiveIntensity:Math.min(ei,1)}) : new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:ei,roughness:.2,metalness:.1});
 
   // ══════════════════════════════════════════════════════════════════════
   // 1. DRILLING STATION — outside crater at (185,-115)
